@@ -1,0 +1,5 @@
+
+class Config:
+    SECRET_KEY="13cfee28e2e7f43cf73b302f19d36d7e71f870fe45c93cc3b5093f92161dd74d"
+    SQLALCHEMY_TRACK_MODIFICATIONS=False
+    SQLALCHEMY_DATABASE_URI="sqlite:///homemate.sqlite3"
