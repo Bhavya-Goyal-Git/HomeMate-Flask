@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
+* {
+    margin: 0;
+    border: 0;
+    box-sizing: border-box;
+    font-family: "Roboto", sans-serif;
+}
+
+:root {
+    --myred: #fe4a49;
+    --mygreen: #2ab7ca;
+    --myyellow: #fed766;
+    --backgroundwhite: #f4f4f8;
+    --mygrey: #e6e6ea;
+    --darkgrey1: #d2d3db;
+    --darkgrey2: #9394a5;
+    --darkgrey3: #40435e;
+}
+
+body {
+    background-color: var(--backgroundwhite);
+}
+
+html::-webkit-scrollbar {
+    display: none;
+}

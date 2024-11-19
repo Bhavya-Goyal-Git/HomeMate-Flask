@@ -1,8 +1,17 @@
-from . import db, bcrypt
+from . import db, bcrypt, jwt
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import CheckConstraint, ForeignKey, String
 import datetime
 from typing import List
+
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    return user.id
+
+@jwt.user_lookup_loader
+def user_lookup_callback(_jwt_header, jwt_data):
+    identity = jwt_data["sub"]
+    return User.query.filter_by(id=int(identity)).one_or_none()
 
 class User(db.Model):
     id:Mapped[int] = mapped_column(primary_key=True)
