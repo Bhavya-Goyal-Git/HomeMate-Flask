@@ -19,12 +19,8 @@ export async function login_user(formdata) {
             );
         }
         else {
-            if (response.errors) {
-                for (const key in response.errors) {
-                    notifStore.addNotif("error", "LogIn Error", response.errors[key]);
-                }
-            } else {
-                notifStore.addNotif("error", "LogIn Error", response.message);
+            for (const key in response.errors) {
+                notifStore.addNotif("error", "LogIn Error", response.errors[key]);
             }
         }
     } catch (error) {

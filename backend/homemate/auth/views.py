@@ -31,7 +31,7 @@ class SignUp(Resource):
             db.session.add(newuser)
             db.session.commit()
         except:
-            authNamespace.abort(404,"Some error occured")
+            authNamespace.abort(404,"Some error occured",errors={"database":"Database error occured"})
         return newuser, 201
      
 login_parser = reqparse.RequestParser()
@@ -47,9 +47,9 @@ class Login(Resource):
         userdata = login_parser.parse_args()
         user = User.query.filter_by(username=userdata["username"]).one_or_none()
         if not user:
-            authNamespace.abort(401,"No such username exists.")
+            authNamespace.abort(401,"Login failed",errors={"username":"No such username exists."})
         if not user.check_password(userdata["password"]):
-            authNamespace.abort(401,"Incorrect Password!")
+            authNamespace.abort(401,"Login failed",errors={"password":"Incorrect Password!"})
         access_token = create_access_token(identity=user)
         refresh_token = create_refresh_token(identity=user)
         return {"access_token":access_token,"refresh_token":refresh_token}, 201
@@ -62,3 +62,10 @@ class RefreshLogin(Resource):
         
         access_token = create_access_token(identity=current_user)
         return {"access_token":access_token}
+
+@authNamespace.route("/test")
+class Testres(Resource):
+    @jwt_required()
+    def get(self):
+        print(current_user.username)
+        return {"hello":f"{current_user.username}"},200

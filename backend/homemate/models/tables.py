@@ -122,7 +122,3 @@ class ServiceRequest(db.Model):
     __table_args__ = (
         CheckConstraint(status.in_(["booked","accepted","rejected","cancelled","served","completed"]), name='service_status_validator'),
     )
-    
-class Transaction(db.Model):
-    id:Mapped[int] = mapped_column(primary_key=True)
-    amount:Mapped[float] = mapped_column(nullable=False) #positive for incoming, negative for outgoing

@@ -213,12 +213,8 @@ const register_user = () => {
         formdata.delete("role");
         login_user(formdata);
       } else {
-        if (response.errors) {
-          for (const key in response.errors) {
-            notifStore.addNotif("error", "SignUp Error", response.errors[key]);
-          }
-        } else {
-          notifStore.addNotif("error", "SignUp Error", response.message);
+        for (const key in response.errors) {
+          notifStore.addNotif("error", "SignUp Error", response.errors[key]);
         }
       }
     } catch (error) {

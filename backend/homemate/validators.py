@@ -32,3 +32,19 @@ def role_validator(role):
     if role in ['customer','professional']:
         return role
     raise ValueError("Role is invalid")
+
+
+add_data = ["base_address","pincode","city","state"]
+def address_validator(val):
+    if not isinstance(val, dict):
+        raise ValueError("Address must be a dictionary.")
+    for key in add_data:
+        if key not in val:
+            raise ValueError(f"Missing {key} in address.")
+        if not val[key]:
+            raise ValueError(f"{key} must be a non-empty string.")
+    return val
+
+def name_validator(val):
+    length_validator(val,2)
+    return val
