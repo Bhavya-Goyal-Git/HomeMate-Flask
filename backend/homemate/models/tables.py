@@ -51,6 +51,19 @@ class Customer(db.Model):
     isflagged:Mapped[bool] = mapped_column(default=False)
     
     service_requests:Mapped[List["ServiceRequest"]] = relationship(back_populates="customer")
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name":self.name,
+            "address":{
+                "base_address":self.base_address,
+                "city":self.city,
+                "state":self.state,
+                "pincode":self.pincode
+            },
+            "isflagged":self.isflagged
+        }
 
 class ServiceCategory(db.Model):
     id:Mapped[int] = mapped_column(primary_key=True)
@@ -75,11 +88,10 @@ class Professional(db.Model): #service worker
     pincode:Mapped[str] = mapped_column(String(6),nullable=True)
     state:Mapped[str] = mapped_column(nullable=False) #address end
     contact_no:Mapped[str] = mapped_column(String(10),nullable=False)
-    profile_pic:Mapped[str] = mapped_column(unique=True,nullable=True)
     submitted_doc:Mapped[str] = mapped_column(unique=True,nullable=False)
     isflagged:Mapped[bool] = mapped_column(default=False)
     isverified:Mapped[bool] = mapped_column(default=False) #admin verify by docs
-    experience:Mapped[str] = mapped_column(nullable=False) #months
+    experience:Mapped[str] = mapped_column(nullable=False) #years
     rating:Mapped[int] = mapped_column(nullable=False,default=0) #rating/raters will be star rating
     num_raters:Mapped[int] = mapped_column(nullable=False,default=0)
     service_id:Mapped[int] = mapped_column(ForeignKey("service.id"))
@@ -89,6 +101,28 @@ class Professional(db.Model): #service worker
     service_type:Mapped["Service"] = relationship(back_populates="professionals")
     reviews:Mapped[List["ProfessionalReview"]] = relationship()
     service_requests:Mapped[List["ServiceRequest"]] = relationship(back_populates="professional")
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name":self.name,
+            "description":self.description,
+            "address":{
+                "base_address":self.base_address,
+                "city":self.city,
+                "state":self.state,
+                "pincode":self.pincode
+            },
+            "contact_no":self.contact_no,
+            "isflagged":self.isflagged,
+            "isverified":self.isverified,
+            "experience":self.experience,
+            "rating":self.rating,
+            "num_raters":self.num_raters,
+            "service_id":self.service_id,
+            "fees":self.fees,
+            "fees_unit":self.fees_unit,
+        }
     
 class ProfessionalReview(db.Model):
     id:Mapped[int] = mapped_column(primary_key=True)

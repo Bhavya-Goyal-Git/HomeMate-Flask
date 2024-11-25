@@ -8,19 +8,49 @@
     <!-- <RouterLink to="#" active-class="selected-navlink" class="nav-link"
       >Login</RouterLink
     > -->
-
-    <RouterLink
-      :to="{ name: 'signup' }"
-      active-class="selected-navlink"
-      class="nav-link last-navtab"
-      >SignIn</RouterLink
+    <button
+      @click="signinout"
+      class="nav-btn"
+      :class="{ 'nav-btn-logout': userstore.is_loggedIn }"
     >
+      <span class="nav-btn-span">{{ buttonTitle }}</span>
+    </button>
   </nav>
   <div class="top-nav-div"></div>
 </template>
 
 <script setup>
-import { RouterLink } from "vue-router";
+import { useNotifStore } from "@/stores/notificationstore";
+import { ref, watch } from "vue";
+import { RouterLink, useRouter } from "vue-router";
+import { useUserStore } from "../../stores/userstore";
+
+const router = useRouter();
+const notifStore = useNotifStore();
+const userstore = useUserStore();
+
+const buttonTitle = ref("Login");
+watch(
+  () => userstore.is_loggedIn,
+  (newval, oldval) => {
+    if (newval === true) {
+      buttonTitle.value = "Log Out";
+    } else {
+      buttonTitle.value = "Login";
+    }
+  },
+  { immediate: true }
+);
+
+function signinout() {
+  if (userstore.is_loggedIn) {
+    router.push({ name: "homepage" });
+    userstore.resetData();
+    notifStore.addNotif("success", "Logged Out", "Logged Out successfully!");
+  } else {
+    router.push({ name: "login" });
+  }
+}
 </script>
 
 <style>
@@ -45,9 +75,6 @@ nav {
   margin-left: 8px;
   cursor: pointer;
 }
-.last-navtab {
-  margin-right: 20px;
-}
 .nav-link {
   font-size: 20px;
   text-decoration: none;
@@ -61,5 +88,57 @@ nav {
 .selected-navlink {
   color: var(--darkgrey3);
   font-weight: bold;
+}
+.nav-btn {
+  outline: none;
+  cursor: pointer;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  margin-right: 20px;
+  font-family: inherit;
+  position: relative;
+  display: inline-block;
+  letter-spacing: 0.05rem;
+  font-weight: 700;
+  font-size: 20px;
+  border-radius: 500px;
+  overflow: hidden;
+  background: #66ff66;
+  color: ghostwhite;
+}
+.nav-btn-logout {
+  background: var(--myred);
+}
+.nav-btn .nav-btn-span {
+  position: relative;
+  z-index: 10;
+  transition: color 0.4s;
+}
+
+.nav-btn:hover .nav-btn-span {
+  color: black;
+}
+
+.nav-btn::before,
+.nav-btn::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.nav-btn::before {
+  content: "";
+  background: var(--darkgrey3);
+  width: 120%;
+  left: -10%;
+  transform: skew(30deg);
+  transition: transform 0.4s cubic-bezier(0.3, 1, 0.8, 1);
+}
+
+.nav-btn:hover::before {
+  transform: translate3d(100%, 0, 0);
 }
 </style>

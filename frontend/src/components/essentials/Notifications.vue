@@ -49,8 +49,8 @@ function removeNotification(id) {
   0% {
     transform: translateX(400px);
   }
-  80% {
-    transform: translateX(-30px);
+  70% {
+    transform: translateX(-45px);
   }
   100% {
     transform: translateX(0);

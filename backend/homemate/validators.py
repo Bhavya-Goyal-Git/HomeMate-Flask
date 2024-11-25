@@ -1,4 +1,4 @@
-from .models.tables import User
+from .models.tables import User, Service
 import re
 
 def length_validator(key,num):
@@ -48,3 +48,35 @@ def address_validator(val):
 def name_validator(val):
     length_validator(val,2)
     return val
+
+def service_title_validator(val):
+    length_validator(val,5)
+    serv = Service.query.filter_by(title=val).one_or_none()
+    if serv:
+        raise ValueError(f"Service with title {val} already exists")
+    return val
+
+def service_title_validator_old(val):
+    length_validator(val,5)
+    return val
+
+def price_validator(val):
+    try:
+        val = float(val)
+    except:
+        raise ValueError("Price must be a floating point number")
+    if val<=0:
+        raise ValueError("Price must be a positive number")
+    return val
+
+def mobile_num_validator(val):
+    pattern = r"^[0-9]+$"
+    if len(val)!=10 or not re.fullmatch(pattern,val):
+        raise ValueError("Mobile number must be 10 digit numeric")
+    return val
+
+def validate_pincode(val):
+    pattern = r"^[0-9]+$"
+    if len(val)!=6 or not re.fullmatch(pattern,val):
+        raise ValueError("Pincode must be 6 digit numeric")
+    return val 

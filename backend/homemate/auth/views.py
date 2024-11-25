@@ -4,19 +4,13 @@ from ..models.tables import User
 from flask_restx import Resource, reqparse, fields
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, current_user
 import homemate.validators as validators
+from ..commonFields import User_model
 
 registration_parser = reqparse.RequestParser()
 registration_parser.add_argument('username',type=validators.username_validator,required=True, location='form')
 registration_parser.add_argument('email_address',type=validators.email_validator,required=True, location='form')
 registration_parser.add_argument('password',type=validators.password_validator,required=True, location='form')
 registration_parser.add_argument('role',type=validators.role_validator,required=True, location='form')
-
-User_model = authNamespace.model("User_model",{
-    "username":fields.String,
-    "email_address":fields.String,
-    "role":fields.String,
-    "date_joined":fields.Date
-})
 
 @authNamespace.route("/signup")
 class SignUp(Resource):
@@ -31,6 +25,7 @@ class SignUp(Resource):
             db.session.add(newuser)
             db.session.commit()
         except:
+            db.session.rollback()
             authNamespace.abort(404,"Some error occured",errors={"database":"Database error occured"})
         return newuser, 201
      
@@ -62,10 +57,3 @@ class RefreshLogin(Resource):
         
         access_token = create_access_token(identity=current_user)
         return {"access_token":access_token}
-
-@authNamespace.route("/test")
-class Testres(Resource):
-    @jwt_required()
-    def get(self):
-        print(current_user.username)
-        return {"hello":f"{current_user.username}"},200

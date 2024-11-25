@@ -33,13 +33,18 @@
 </template>
 
 <script setup>
+import { useUserStore } from "@/stores/userstore";
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { login_user } from "../composables/loginuser";
 import { useNotifStore } from "../stores/notificationstore";
 
 const username = ref("");
 const password = ref("");
 const notifStore = useNotifStore();
+const userStore = useUserStore();
+const router = useRouter();
+
 function make_request() {
   const formdata = new FormData(document.querySelector(".register-form"));
   if (username.value.length == 0 || password.value.length == 0) {
@@ -50,6 +55,16 @@ function make_request() {
     );
     return;
   }
-  login_user(formdata);
+  login_user(formdata).then((val) => {
+    if (val) {
+      if (userStore.role == "customer") {
+        router.push({ name: "customerHome" });
+      } else if (userStore.role == "admin") {
+        router.push({ name: "adminHome" });
+      } else {
+        router.push({ name: "workerHome" });
+      }
+    }
+  });
 }
 </script>

@@ -15,7 +15,10 @@ api = Api(app)
 from .auth import authNamespace
 from .customer import customerNs
 from .professional import professNs
+from .services import serviceNs
 
 api.add_namespace(authNamespace)
 api.add_namespace(customerNs)
 api.add_namespace(professNs)
+api.add_namespace(serviceNs)
+import homemate.commonRoutes

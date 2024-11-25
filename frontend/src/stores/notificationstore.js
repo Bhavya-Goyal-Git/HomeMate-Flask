@@ -24,6 +24,6 @@ export const useNotifStore = defineStore('notifStore', () => {
     return {
         notifications,
         removeNotif,
-        addNotif
+        addNotif,
     }
 })

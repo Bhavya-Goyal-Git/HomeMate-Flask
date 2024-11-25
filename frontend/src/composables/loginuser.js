@@ -17,6 +17,10 @@ export async function login_user(formdata) {
                 "Login Success",
                 "User logged in successfully."
             );
+            if (userStore.role === "") {
+                await userStore.getUserData()
+            }
+            return true;
         }
         else {
             for (const key in response.errors) {
@@ -26,4 +30,5 @@ export async function login_user(formdata) {
     } catch (error) {
         notifStore.addNotif("error", "Error", error.message);
     }
+    return false;
 }

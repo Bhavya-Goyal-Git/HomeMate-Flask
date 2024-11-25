@@ -102,7 +102,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { RouterLink } from "vue-router";
+import { RouterLink, useRouter } from "vue-router";
 import { useUserStore } from "../stores/userstore";
 import { useNotifStore } from "../stores/notificationstore";
 import { login_user } from "../composables/loginuser";
@@ -163,8 +163,9 @@ const confirm_passwd_valid = computed(() => {
   return true;
 });
 
-const userStore = useUserStore();
 const notifStore = useNotifStore();
+const userStore = useUserStore();
+const router = useRouter();
 const register_user = () => {
   const formdata = new FormData(document.querySelector(".register-form"));
   if (
@@ -211,7 +212,7 @@ const register_user = () => {
         );
         formdata.delete("email_address");
         formdata.delete("role");
-        login_user(formdata);
+        return login_user(formdata);
       } else {
         for (const key in response.errors) {
           notifStore.addNotif("error", "SignUp Error", response.errors[key]);
@@ -220,8 +221,17 @@ const register_user = () => {
     } catch (error) {
       notifStore.addNotif("error", "Error", error.message);
     }
+    return false;
   }
-  make_request();
+  make_request().then((val) => {
+    if (val) {
+      if (userStore.role == "customer") {
+        router.push({ name: "userdata" });
+      } else {
+        router.push({ name: "workerdata" });
+      }
+    }
+  });
 };
 </script>
 
