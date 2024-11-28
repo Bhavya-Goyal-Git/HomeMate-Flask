@@ -19,6 +19,16 @@ customer_model = customerNs.model("customerModel",{
 
 @customerNs.route("/data/<int:id>")
 class CustomerData(Resource):
+    @jwt_required()
+    @customerNs.marshal_with(customer_model)
+    def get(self,id):
+        """Get customer's data using id (user_id)"""
+        if current_user.id != id and current_user.role !="admin":
+            customerNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        cdata = Customer.query.filter_by(user_id=id).one_or_none()
+        if not cdata:
+            customerNs.abort(404,"Some error occured",errors={"Customer":"Customer with given id does not exist."})
+        return cdata.to_dict(),200
     
     @jwt_required()
     @customerNs.expect(userdata_parser)
@@ -40,3 +50,45 @@ class CustomerData(Resource):
             db.session.rollback()
             customerNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
         return newCustomer.to_dict(),201
+    
+    @jwt_required()
+    def patch(self,id):
+        """Flag or unflag a customer via id (cid)"""
+        if current_user.role!="admin":
+            customerNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        cust = Customer.query.filter_by(id=id).one_or_none()
+        if not cust:
+            customerNs.abort(404,"Some error occured",errors={"Customer":"Customer with given id does not exist."})
+        cust.isflagged = not cust.isflagged
+        try:
+            db.session.add(cust)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            customerNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
+        return {"success":"Customer successfully (un)flagged"},200
+
+
+@customerNs.route("/data")
+class AllCustData(Resource):
+    
+    @jwt_required()
+    @customerNs.marshal_list_with(customer_model)
+    def get(self):
+        """Get all customer's data"""
+        if current_user.role!="admin":
+            customerNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        cdata = Customer.query.all()
+        dataTosend = [c.to_dict() for c in cdata]
+        return dataTosend,200
+
+@customerNs.route("/<int:cid>")
+class OpenCustData(Resource):
+    @jwt_required()
+    @customerNs.marshal_with(customer_model)
+    def get(self,cid):
+        """Get customer using cid"""
+        cust = Customer.query.filter_by(id=cid).one_or_none()
+        if not cust:
+            customerNs.abort(404,"Some error occured",errors={"Customer":"Customer with given id does not exist."})
+        return cust.to_dict(),200

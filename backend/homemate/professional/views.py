@@ -1,14 +1,16 @@
 from homemate.professional import professNs
 from homemate import app
+from flask import send_file
 from flask_restx import Resource, reqparse, fields
 from flask_jwt_extended import jwt_required, current_user
 from ..models import db
-from ..models.tables import Professional
+from ..models.tables import Professional, Service, ProfessionalReview, Customer
 import homemate.validators as validator
 from ..commonFields import address_model
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 import os
+from sqlalchemy import or_,desc
 
 profess_parser = reqparse.RequestParser()
 profess_parser.add_argument("name",type=validator.name_validator,required=True,location="form")
@@ -31,7 +33,7 @@ profess_model = professNs.model("ProfessionalModel",{
     "address":fields.Nested(address_model),
     "contact_no":fields.String,
     "isflagged":fields.Boolean,
-    "isverified":fields.Boolean,
+    "isverified":fields.String,
     "experience":fields.Integer,
     "rating":fields.Integer,
     "num_raters":fields.Integer,
@@ -40,8 +42,22 @@ profess_model = professNs.model("ProfessionalModel",{
     "fees_unit":fields.String,
 })
 
+patch_parser = reqparse.RequestParser()
+patch_parser.add_argument("status",location="json",type=str)
+
 @professNs.route("/data/<int:id>")
 class ProfessionalData(Resource):
+    
+    @jwt_required()
+    @professNs.marshal_with(profess_model)
+    def get(self,id):
+        """Get Professional's data using id (User id)"""
+        if current_user.id != id and current_user.role !="admin":
+            professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        pdata = Professional.query.filter_by(user_id=id).one_or_none()
+        if not pdata:
+            professNs.abort(404,"Some error occured",errors={"Professional":"Professional with given id does not exist."})
+        return pdata.to_dict(),200
     
     @jwt_required()
     @professNs.expect(profess_parser)
@@ -78,3 +94,142 @@ class ProfessionalData(Resource):
             db.session.rollback()
             professNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
         return newprofessional.to_dict(),201
+    
+    @jwt_required()
+    @professNs.expect(patch_parser)
+    def patch(self,id):
+        """Update professional's Document approval by id (pid) or flag a professional (pid)"""
+        if current_user.role != "admin":
+            professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        pdata = Professional.query.filter_by(id=id).one_or_none()
+        if not pdata:
+            professNs.abort(404,"Some error occured",errors={"Professional":"Professional with given id does not exist."})
+        st = patch_parser.parse_args()
+        resultStr="professional document approval status updated"
+        if st.get("status"):
+            pdata.isverified = st["status"]
+        else:
+            pdata.isflagged = not pdata.isflagged
+            resultStr=f"Professional successfully (un)flagged" 
+        try:
+            db.session.add(pdata)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            professNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
+        return {"success":resultStr},200
+
+query_data_parser = reqparse.RequestParser()
+query_data_parser.add_argument("unverified",type=bool,location="args")
+
+@professNs.route("/data")
+class AllProfessData(Resource):
+    
+    @jwt_required()
+    @professNs.expect(query_data_parser)
+    @professNs.marshal_list_with(profess_model)
+    def get(self):
+        """Get Data of all professionals"""
+        if current_user.role!="admin":
+            professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        qdata = query_data_parser.parse_args()
+        pdata = None
+        if qdata.get("unverified"):
+            pdata = Professional.query.filter_by(isverified="pending").all()
+        else:
+            pdata = Professional.query.all()
+        dataTosend = [p.to_dict() for p in pdata]
+        return dataTosend,200
+    
+@professNs.route("/docs/<int:id>")
+class ProfessionalDocs(Resource):
+    
+    @jwt_required()
+    def get(self,id):
+        """Get Professional's submitted document using id (pid)"""
+        if (current_user.role == "professional" and current_user.professional_data.id!=id) and current_user.role!="admin":
+            professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        pdata = Professional.query.filter_by(id=id).one_or_none()
+        if not pdata:
+            professNs.abort(404,"Some error occured",errors={"Professional":"Professional with given id does not exist."})
+        file_path = os.path.join(app.root_path,"uploads",pdata.submitted_doc)
+        if not os.path.exists(file_path):
+            professNs.abort(404,"Some error occured",errors={"Professional":"Submitted document could not be found!"})
+        return send_file(
+            file_path,
+            mimetype='application/pdf'
+        )
+
+searchquery_parser = reqparse.RequestParser()
+searchquery_parser.add_argument("q",required=True,type=str,location="args")
+
+@professNs.route("/search")
+class SearchProfessional(Resource):
+    @jwt_required()
+    @professNs.expect(searchquery_parser)
+    @professNs.marshal_list_with(profess_model)
+    def get(self):
+        """Search approved professionals via professional's name, service or service category"""
+        searchq = searchquery_parser.parse_args()
+        searchq = searchq["q"]
+        searchq = validator.clean_searchquery(searchq)
+        if len(searchq)==0:
+            professNs.abort(404,"Some error occured",errors={"Professional":"Search Query Empty"})
+        pdata = db.session.query(Professional).join(Professional.service_type).filter(Professional.isverified == "approved").filter(or_(
+            Professional.name.ilike(searchq),
+            Service.title.ilike(searchq),
+            Service.category.ilike(searchq)
+            )).all()
+        dataTosend = [p.to_dict() for p in pdata]
+        return dataTosend,200
+
+review_parser = reqparse.RequestParser()
+review_parser.add_argument("stars",required=True,type=int,location="json")
+review_parser.add_argument("review",required=True,type=str,location="json")
+
+review_model = professNs.model("ProfessionalReview",{
+    "id":fields.Integer,
+    "customer_name":fields.String,
+    "stars":fields.Integer,
+    "review":fields.String,
+    "dateofreview":fields.Date
+})
+
+@professNs.route("/review/<int:id>")
+class ProfReviews(Resource):
+    @jwt_required()
+    @professNs.marshal_list_with(review_model)
+    def get(self,id):
+        """Get all reviews of a professional by id (pid)"""
+        rdata = db.session.query(ProfessionalReview,Customer).join(ProfessionalReview.customer).filter(ProfessionalReview.professional_id==id).order_by(desc(ProfessionalReview.dateofreview)).all()
+        dataToSend= []
+        for entry,cust in rdata:
+            dataToSend.append({"id":entry.id,"customer_name":cust.name,"stars":entry.stars,"review":entry.review,"dateofreview":entry.dateofreview})
+        return dataToSend,200
+    
+    @jwt_required()
+    @professNs.expect(review_parser)
+    def post(self,id):
+        """Review a service professional by id (pid)"""
+        if current_user.role!="customer":
+            professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        rdata = review_parser.parse_args()
+        rnew = ProfessionalReview(customer_id=current_user.customer_data.id,professional_id=id,stars=rdata["stars"],review=rdata["review"])
+        try:
+            db.session.add(rnew)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            professNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
+        return {"success":"Reviewed Professional"},201
+
+@professNs.route("/<int:pid>")
+class OpenProfData(Resource):
+    @jwt_required()
+    @professNs.marshal_with(profess_model)
+    def get(self,pid):
+        """Get professional using pid"""
+        pdata = Professional.query.filter_by(id=pid).one_or_none()
+        if not pdata:
+            professNs.abort(404,"Some error occured",errors={"Professional":"Professional with given id does not exist."})
+        return pdata.to_dict(),200

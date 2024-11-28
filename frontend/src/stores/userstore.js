@@ -84,6 +84,7 @@ export const useUserStore = defineStore('userStore', () => {
 
     return {
         uid,
+        username,
         is_loggedIn,
         role,
         resetData,

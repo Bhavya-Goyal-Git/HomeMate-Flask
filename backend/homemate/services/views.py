@@ -2,7 +2,7 @@ from flask_restx import Resource, fields, reqparse
 from . import serviceNs
 import homemate.validators as validators
 from ..models import db
-from ..models.tables import Service, ServiceCategory
+from ..models.tables import Service, ServiceCategory, ServiceRequest, Professional, Customer
 from flask_jwt_extended import current_user, jwt_required
 
 service_parser = reqparse.RequestParser()
@@ -110,11 +110,82 @@ categories_model = serviceNs.model("ServiceCategory",{
 })
 
 @serviceNs.route("/categories")
-class ServiceCats(Resource):
-    
+class ServiceCats(Resource): 
     @jwt_required()
     @serviceNs.marshal_list_with(categories_model)
     def get(self):
         """Get all service Categories"""
         cats = ServiceCategory.query.all()
         return cats,200
+
+serviceRequest_parser = reqparse.RequestParser()
+serviceRequest_parser.add_argument("professional_id",location="json",required=True,type=int)
+serviceRequest_parser.add_argument("dateofservice",location="json",required=True,type=validators.date_validator)
+
+@serviceNs.route("/request")
+class ServReq(Resource):
+    @jwt_required()
+    @serviceNs.expect(serviceRequest_parser)
+    def post(self):
+        """Create a service request"""
+        if current_user.role!="customer":
+            serviceNs.abort(401,"Some error occured",errors={"unauthorized":"You are not authorized to make a service request"})
+        sdata = serviceRequest_parser.parse_args()
+        prof = Professional.query.filter_by(id=sdata["professional_id"]).one_or_none()
+        if not prof:
+            serviceNs.abort(404,"Some error occured",errors={"service":"No professional found with given id"})
+        snew = ServiceRequest()
+        snew.customer = current_user.customer_data
+        snew.professional=prof
+        snew.dateofcompletion = sdata["dateofservice"]
+        snew.status="booked"
+        try:
+            db.session.add(snew)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            serviceNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
+        return {"success":"service request made"},200
+
+serviceRequest_model = serviceNs.model("ServiceRequestModel",{
+    "id":fields.Integer,
+    "customer_name":fields.String,
+    "professional_name":fields.String,
+    "service_name":fields.String,
+    "dateofrequest":fields.Date,
+    "dateofcompletion":fields.Date,
+    "status":fields.String,
+    "work_units":fields.Float,
+    "parts_cost":fields.Float,
+    "total_bill":fields.Float
+})
+
+@serviceNs.route("/requests/<string:role>/<int:id>")
+class ServReqss(Resource):
+    
+    @jwt_required()
+    @serviceNs.marshal_list_with(serviceRequest_model)
+    def get(self,role,id):
+        """Get All service requests for a professional (pid) or a customer (cid)"""
+        if current_user.role != role or (current_user.role=="customer" and current_user.customer_data.id!=id) or (current_user.role=="professional" and current_user.professional_data.id!=id):
+            serviceNs.abort(401,"Some error occured",errors={"unauthorized":"You are not authorized to view this service request"})
+        reqs = []
+        if role=="customer":
+            reqs = db.session.query(ServiceRequest,Service.title,Professional.name,Customer.name).join(ServiceRequest.professional).join(ServiceRequest.customer).join(Professional.service_type).filter(ServiceRequest.customer_id==id).all()
+        else: #professional
+            reqs = db.session.query(ServiceRequest,Service.title,Professional.name,Customer.name).join(ServiceRequest.professional).join(ServiceRequest.customer).join(Professional.service_type).filter(ServiceRequest.professional_id==id).all()
+        dataToSend = []
+        for sreq,serv,prof,cust in reqs:
+            dataToSend.append({
+                "id":sreq.id,
+                "customer_name":cust,
+                "professional_name":prof,
+                "service_name":serv,
+                "dateofrequest":sreq.dateofrequest,
+                "dateofcompletion":sreq.dateofcompletion,
+                "status":sreq.status,
+                "work_units":sreq.work_units if sreq.work_units else -1,
+                "parts_cost":sreq.parts_cost if sreq.parts_cost else -1,
+                "total_bill":sreq.total_bill if sreq.total_bill else -1
+            })
+        return dataToSend,200

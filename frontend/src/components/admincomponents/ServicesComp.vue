@@ -149,7 +149,7 @@ function completeEdit(servnew) {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 10px auto;
+  margin: 30px auto 10px;
 }
 .serv-head-div h1 {
   margin-right: 10px;
@@ -159,7 +159,7 @@ function completeEdit(servnew) {
   margin: 25px auto;
   font-size: 16px;
   min-width: 400px;
-  max-width: 1250px;
+  max-width: 1300px;
   border-radius: 10px 10px 0 0;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }

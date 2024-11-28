@@ -24,7 +24,7 @@
 .modal-fg {
   background-color: var(--backgroundwhite);
   width: 60%;
-  max-height: 70%;
+  max-height: 85%;
   padding: 20px;
   border-radius: 15px;
   overflow-y: scroll;

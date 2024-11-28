@@ -5,9 +5,56 @@
       class="logoimg"
       @click="$router.push({ name: 'homepage' })"
     />
-    <!-- <RouterLink to="#" active-class="selected-navlink" class="nav-link"
-      >Login</RouterLink
-    > -->
+    <template v-if="userstore.is_loggedIn">
+      <template v-if="userstore.role == 'customer'">
+        <RouterLink
+          :to="{ name: 'customerHome' }"
+          active-class="selected-navlink"
+          class="nav-link"
+          >Home</RouterLink
+        >
+        <RouterLink
+          :to="{ name: 'customerStats' }"
+          active-class="selected-navlink"
+          class="nav-link"
+          >Statistics</RouterLink
+        >
+      </template>
+      <template v-else-if="userstore.role == 'professional'">
+        <RouterLink
+          :to="{ name: 'workerHome' }"
+          active-class="selected-navlink"
+          class="nav-link"
+          >Home</RouterLink
+        >
+        <RouterLink
+          :to="{ name: 'workerStats' }"
+          active-class="selected-navlink"
+          class="nav-link"
+          >Statistics</RouterLink
+        >
+      </template>
+      <template v-else>
+        <RouterLink
+          :to="{ name: 'adminHome' }"
+          active-class="selected-navlink"
+          class="nav-link"
+          >Home</RouterLink
+        >
+        <RouterLink
+          :to="{ name: 'adminFlagUsers' }"
+          active-class="selected-navlink"
+          class="nav-link"
+          >Manage Users</RouterLink
+        >
+        <RouterLink
+          :to="{ name: 'adminStats' }"
+          active-class="selected-navlink"
+          class="nav-link"
+          >Statistics</RouterLink
+        >
+      </template>
+    </template>
     <button
       @click="signinout"
       class="nav-btn"

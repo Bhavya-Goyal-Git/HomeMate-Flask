@@ -1,4 +1,5 @@
 from .models.tables import User, Service
+from datetime import datetime
 import re
 
 def length_validator(key,num):
@@ -79,4 +80,18 @@ def validate_pincode(val):
     pattern = r"^[0-9]+$"
     if len(val)!=6 or not re.fullmatch(pattern,val):
         raise ValueError("Pincode must be 6 digit numeric")
-    return val 
+    return val
+
+def clean_searchquery(val):
+    return "%" + "".join([char for char in val if char.isalnum()]) + "%"
+
+def date_validator(val):
+    pattern = r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    if not re.fullmatch(pattern,val):
+        raise ValueError("Invalid date sent Regex")
+    try:
+        val = datetime.strptime(val, '%Y-%m-%d').date()
+    except ValueError as e:
+        print(f"Error: {e}")
+        raise ValueError("Invalid date sent Convert")
+    return val

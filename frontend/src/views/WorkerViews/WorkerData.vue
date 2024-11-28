@@ -283,6 +283,11 @@ function make_request() {
   backend_req(`/professional/data/${userStore.uid}`, "POST", formdata).then(
     (val) => {
       if (val) {
+        notifStore.addNotif(
+          "success",
+          "Registeration Done",
+          "Professional registeration completed successfully."
+        );
         router.push({ name: "workerHome" });
       }
     }

@@ -90,7 +90,7 @@ class Professional(db.Model): #service worker
     contact_no:Mapped[str] = mapped_column(String(10),nullable=False)
     submitted_doc:Mapped[str] = mapped_column(unique=True,nullable=False)
     isflagged:Mapped[bool] = mapped_column(default=False)
-    isverified:Mapped[bool] = mapped_column(default=False) #admin verify by docs
+    isverified:Mapped[str] = mapped_column(default="pending") #admin verify by docs
     experience:Mapped[str] = mapped_column(nullable=False) #years
     rating:Mapped[int] = mapped_column(nullable=False,default=0) #rating/raters will be star rating
     num_raters:Mapped[int] = mapped_column(nullable=False,default=0)
@@ -101,6 +101,10 @@ class Professional(db.Model): #service worker
     service_type:Mapped["Service"] = relationship(back_populates="professionals")
     reviews:Mapped[List["ProfessionalReview"]] = relationship()
     service_requests:Mapped[List["ServiceRequest"]] = relationship(back_populates="professional")
+    
+    __table_args__ = (
+        CheckConstraint(isverified.in_(["pending","approved","rejected"]), name='Professional_verification_validator'),
+    )
     
     def to_dict(self):
         return {
@@ -145,10 +149,9 @@ class ServiceRequest(db.Model):
     dateofrequest:Mapped[datetime.date] = mapped_column(default=datetime.date.today())
     dateofcompletion:Mapped[datetime.date] = mapped_column(nullable=True)
     status:Mapped[str] = mapped_column(nullable=False)
-    remarks:Mapped[str]
-    work_units:Mapped[float] #to be filled by professional
-    parts_cost:Mapped[float] #to be filled by professional
-    total_bill:Mapped[float] # base price + (work_units * professional fees) + parts cost
+    work_units:Mapped[float] = mapped_column(nullable=True)#to be filled by professional
+    parts_cost:Mapped[float] = mapped_column(nullable=True)#to be filled by professional
+    total_bill:Mapped[float] = mapped_column(nullable=True)# base price + (work_units * professional fees) + parts cost
     
     customer:Mapped["Customer"] = relationship()
     professional:Mapped["Professional"] = relationship()

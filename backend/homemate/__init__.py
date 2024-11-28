@@ -10,7 +10,13 @@ bcrypt.init_app(app)
 db.init_app(app)
 jwt.init_app(app)
 CORS(app)
-api = Api(app)
+api = Api(app,title="HomeMate Platform API",description="A REST API for backend of HomeMate, a platform where service professionals and customers can register and find each other!",authorizations={
+    "Bearer Auth":{
+        "type":"apiKey",
+        "in":"header",
+        "name":"Authorization",
+        "description":"Add a JWT with ** Bearer &lt;JWT&gt; to authorize"
+    }}, security="Bearer Auth")
 
 from .auth import authNamespace
 from .customer import customerNs

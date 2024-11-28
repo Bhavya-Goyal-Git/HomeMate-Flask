@@ -1,7 +1,7 @@
 import { useNotifStore } from "../stores/notificationstore";
 import { useUserStore } from "../stores/userstore";
 
-export async function backend_req(endpoint, typeofreq, payload) {
+export async function backend_req_file(endpoint, typeofreq) {
     const notifStore = useNotifStore();
     const userStore = useUserStore();
 
@@ -11,29 +11,21 @@ export async function backend_req(endpoint, typeofreq, payload) {
             Authorization: `Bearer ${userStore.access_token}`
         }
     }
-    if (payload != null) {
-        if (payload instanceof FormData) {
-            options.body = payload;
-        } else {
-            options.body = JSON.stringify(payload);
-            options.headers["Content-Type"] = "application/json"
-        }
-    }
     try {
         const req = await fetch(`http://localhost:5000${endpoint}`, options);
-        const response = await req.json();
-        console.log(req)
-        console.log(response)
         if (req.ok) {
-            return response;
+            const blob = await req.blob();
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
         }
         else {
             // maybe access token expired
+            const response = await req.json();
             if (response["message"] == "Token is expired") {
                 try {
                     await userStore.refresh_accestoken();
                     //retry now
-                    return await backend_req(endpoint, typeofreq, payload);
+                    await backend_req_file(endpoint, typeofreq);
                 } catch (error) { }
             }
             else {
@@ -46,5 +38,4 @@ export async function backend_req(endpoint, typeofreq, payload) {
     catch (error) {
         notifStore.addNotif("error", "Error", error.message);
     }
-    return false;
 }
