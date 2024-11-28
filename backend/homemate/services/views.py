@@ -4,6 +4,7 @@ import homemate.validators as validators
 from ..models import db
 from ..models.tables import Service, ServiceCategory, ServiceRequest, Professional, Customer
 from flask_jwt_extended import current_user, jwt_required
+from sqlalchemy import asc,desc
 
 service_parser = reqparse.RequestParser()
 service_parser.add_argument("title",type=validators.service_title_validator,required=True,location="json")
@@ -151,6 +152,7 @@ serviceRequest_model = serviceNs.model("ServiceRequestModel",{
     "id":fields.Integer,
     "customer_name":fields.String,
     "professional_name":fields.String,
+    "professional_id":fields.Integer,
     "service_name":fields.String,
     "dateofrequest":fields.Date,
     "dateofcompletion":fields.Date,
@@ -162,7 +164,6 @@ serviceRequest_model = serviceNs.model("ServiceRequestModel",{
 
 @serviceNs.route("/requests/<string:role>/<int:id>")
 class ServReqss(Resource):
-    
     @jwt_required()
     @serviceNs.marshal_list_with(serviceRequest_model)
     def get(self,role,id):
@@ -171,15 +172,16 @@ class ServReqss(Resource):
             serviceNs.abort(401,"Some error occured",errors={"unauthorized":"You are not authorized to view this service request"})
         reqs = []
         if role=="customer":
-            reqs = db.session.query(ServiceRequest,Service.title,Professional.name,Customer.name).join(ServiceRequest.professional).join(ServiceRequest.customer).join(Professional.service_type).filter(ServiceRequest.customer_id==id).all()
+            reqs = db.session.query(ServiceRequest,Service.title,Professional,Customer.name).join(ServiceRequest.professional).join(ServiceRequest.customer).join(Professional.service_type).filter(ServiceRequest.customer_id==id).order_by(desc(ServiceRequest.dateofcompletion)).all()
         else: #professional
-            reqs = db.session.query(ServiceRequest,Service.title,Professional.name,Customer.name).join(ServiceRequest.professional).join(ServiceRequest.customer).join(Professional.service_type).filter(ServiceRequest.professional_id==id).all()
+            reqs = db.session.query(ServiceRequest,Service.title,Professional,Customer.name).join(ServiceRequest.professional).join(ServiceRequest.customer).join(Professional.service_type).filter(ServiceRequest.professional_id==id).order_by(desc(ServiceRequest.dateofcompletion)).all()
         dataToSend = []
         for sreq,serv,prof,cust in reqs:
             dataToSend.append({
                 "id":sreq.id,
                 "customer_name":cust,
-                "professional_name":prof,
+                "professional_name":prof.name,
+                "professional_id":prof.id,
                 "service_name":serv,
                 "dateofrequest":sreq.dateofrequest,
                 "dateofcompletion":sreq.dateofcompletion,
@@ -189,3 +191,112 @@ class ServReqss(Resource):
                 "total_bill":sreq.total_bill if sreq.total_bill else -1
             })
         return dataToSend,200
+
+sreq_parser = reqparse.RequestParser()
+sreq_parser.add_argument("status",required=True,location="json",type=validators.serviceStatus_validator)
+sreq_parser.add_argument("work_units",location="json",type=float)
+sreq_parser.add_argument("parts_cost",location="json",type=float)
+
+@serviceNs.route("/request/<int:sid>")
+class ServREQ(Resource):
+    @jwt_required()
+    @serviceNs.expect(sreq_parser)
+    def put(self,sid):
+        """Make changes to Service Request using service id"""
+        sdata = ServiceRequest.query.filter_by(id=sid).one_or_none()
+        flag=False
+        if not sdata:
+            serviceNs.abort(404,"Some error occured",errors={"service":"No Service found with given id"})
+        sreq = sreq_parser.parse_args()
+        if current_user.role=="customer" and current_user.customer_data.id==sdata.customer_id:
+            if sdata.status == "booked" or sdata.status == "accepted": # can be cancelled by customer
+                if sreq["status"]!="cancelled":
+                    serviceNs.abort(404,"Some error occured",errors={"Error":"Invalid change requested!"})
+                sdata.status = "cancelled"
+                flag=True
+            elif sdata.status == "served": #can be completed by customer
+                if sreq["status"]!="completed":
+                    serviceNs.abort(404,"Some error occured",errors={"Error":"Invalid change requested!"})
+                sdata.status = "completed"
+                flag=True
+            else: 
+                serviceNs.abort(404,"Some error occured",errors={"service":"Can't make changes to this service request!"})
+        elif current_user.role=="professional" and current_user.professional_data.id==sdata.professional_id:
+            if sdata.status == "booked": #accept or reject by worker
+                if sreq["status"] not in ["accepted","rejected"]:
+                    serviceNs.abort(404,"Some error occured",errors={"Error":"Invalid change requested!"})
+                sdata.status = sreq["status"]
+                flag=True
+            elif sdata.status == "accepted": #served by worker
+                if sreq["status"] != "served":
+                    serviceNs.abort(404,"Some error occured",errors={"Error":"Invalid change requested!"})
+                if not sreq.get("work_units") or not sreq.get("parts_cost"):
+                    serviceNs.abort(404,"Some error occured",errors={"Error":"Data insufficient to serve the request!"})
+                sdata.status = "served"
+                sdata.work_units = sreq["work_units"]
+                sdata.parts_cost = sreq["parts_cost"]
+                #total calculation
+                prof = sdata.professional
+                sdata.total_bill = prof.service_type.base_price + (sdata.work_units * prof.fees) + sdata.parts_cost
+                flag=True
+            else:
+                serviceNs.abort(404,"Some error occured",errors={"service":"Can't make changes to this service request!"})
+        else:
+            serviceNs.abort(401,"Some error occured",errors={"unauthorized":"You are not authorized to change this service request"})
+        if flag:
+            try:
+                db.session.add(sdata)
+                db.session.commit()
+            except:
+                db.session.rollback()
+                serviceNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
+        return {"success":"changes made successfully!"},200
+
+    @jwt_required()
+    def delete(self,sid):
+        """Delete a Cancelled or Rejected Service Request"""
+        sdata = ServiceRequest.query.filter_by(id=sid).one_or_none()
+        if not sdata:
+            serviceNs.abort(404,"Some error occured",errors={"service":"No Service found with given id"})
+        if current_user.role!="customer" or sdata.customer_id!=current_user.customer_data.id:
+            serviceNs.abort(401,"Some error occured",errors={"unauthorized":"You are not authorized to delete this service request"})
+        if sdata.status not in ["rejected","cancelled"]:
+            serviceNs.abort(401,"Some error occured",errors={"unauthorized":"This service request can't be deleted"})
+        try:
+            db.session.delete(sdata)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            serviceNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
+        return {"success":"service request deleted"},200
+
+sreq_bill_model = serviceNs.model("ServiceRequestBill",{
+    "base_price":fields.Float,
+    "work_units":fields.Float,
+    "worker_fee":fields.Float,
+    "worker_fee_unit":fields.String,
+    "parts_cost":fields.Float,
+    "total_bill":fields.Float
+})
+@serviceNs.route("/bill/<int:sid>")
+class SBill(Resource):
+    @jwt_required()
+    @serviceNs.marshal_with(sreq_bill_model)
+    def get(self,sid):
+        """Get bill details of a Served or Completed Service Request by sid"""
+        sdata = ServiceRequest.query.filter_by(id=sid).one_or_none()
+        if not sdata:
+            serviceNs.abort(404,"Some error occured",errors={"service":"No Service found with given id"})
+        if sdata.status not in ["served","completed"]:
+            serviceNs.abort(401,"Some error occured",errors={"service":"Bill can't be generated for this service request"})
+        prof = sdata.professional
+        d = {
+            "base_price":prof.service_type.base_price,
+            "work_units":sdata.work_units,
+            "worker_fee":prof.fees,
+            "worker_fee_unit":prof.fees_unit,
+            "parts_cost":sdata.parts_cost,
+            "total_bill":sdata.total_bill
+        }
+        return d,200
+        

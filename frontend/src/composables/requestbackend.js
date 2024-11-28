@@ -22,8 +22,6 @@ export async function backend_req(endpoint, typeofreq, payload) {
     try {
         const req = await fetch(`http://localhost:5000${endpoint}`, options);
         const response = await req.json();
-        console.log(req)
-        console.log(response)
         if (req.ok) {
             return response;
         }

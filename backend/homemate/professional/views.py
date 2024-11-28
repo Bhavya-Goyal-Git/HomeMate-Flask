@@ -4,7 +4,7 @@ from flask import send_file
 from flask_restx import Resource, reqparse, fields
 from flask_jwt_extended import jwt_required, current_user
 from ..models import db
-from ..models.tables import Professional, Service, ProfessionalReview, Customer
+from ..models.tables import Professional, Service, ProfessionalReview, Customer, ServiceRequest
 import homemate.validators as validator
 from ..commonFields import address_model
 from werkzeug.datastructures import FileStorage
@@ -213,10 +213,15 @@ class ProfReviews(Resource):
         """Review a service professional by id (pid)"""
         if current_user.role!="customer":
             professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        prof = Professional.query.filter_by(id=id).one_or_none()
+        if not prof:
+            professNs.abort(404,"Some error occured",errors={"Professional":"Professional with given id does not exist."})
         rdata = review_parser.parse_args()
         rnew = ProfessionalReview(customer_id=current_user.customer_data.id,professional_id=id,stars=rdata["stars"],review=rdata["review"])
+        prof.rating += rdata["stars"]
+        prof.num_raters +=1
         try:
-            db.session.add(rnew)
+            db.session.add_all([rnew,prof])
             db.session.commit()
         except:
             db.session.rollback()
@@ -233,3 +238,44 @@ class OpenProfData(Resource):
         if not pdata:
             professNs.abort(404,"Some error occured",errors={"Professional":"Professional with given id does not exist."})
         return pdata.to_dict(),200
+
+pstat_model = professNs.model("ProfessionalStats1",{
+    "status":fields.String,
+    "daterecieve":fields.Date,
+    "date":fields.Date,
+    "earning":fields.Float
+})
+pstat_model2 = professNs.model("ProfessionalStats2",{
+    "date":fields.Date(attribute='dateofreview'),
+    "stars":fields.Integer
+})
+
+@professNs.route("/servicestats")
+class PStat(Resource):
+    @jwt_required()
+    @professNs.marshal_list_with(pstat_model)
+    def get(self):
+        """Get service related stats of professional"""
+        if current_user.role!="professional":
+            professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        pdata = db.session.query(ServiceRequest,Professional.fees).join(ServiceRequest.professional).filter(ServiceRequest.professional_id==current_user.professional_data.id).all()
+        d = []
+        for sreq,fee in pdata:
+            d.append({
+                "status":sreq.status,
+                "daterecieve":sreq.dateofrequest,
+                "date":sreq.dateofcompletion,
+                "earning":(sreq.work_units * fee) if sreq.work_units else 0
+            })
+        return d,200
+
+@professNs.route("/reviewstats")
+class PStat2(Resource):
+    @jwt_required()
+    @professNs.marshal_list_with(pstat_model2)
+    def get(self):
+        """Get review related stats of professional"""
+        if current_user.role!="professional":
+            professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        pdata = ProfessionalReview.query.filter_by(professional_id=current_user.professional_data.id).all()
+        return pdata,200

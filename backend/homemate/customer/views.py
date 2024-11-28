@@ -2,7 +2,7 @@ from homemate.customer import customerNs
 from flask_restx import Resource, reqparse, fields
 from flask_jwt_extended import jwt_required, current_user
 from ..models import db
-from ..models.tables import Customer
+from ..models.tables import Customer, Service, ServiceRequest, Professional
 import homemate.validators as validator
 from ..commonFields import address_model
 
@@ -92,3 +92,28 @@ class OpenCustData(Resource):
         if not cust:
             customerNs.abort(404,"Some error occured",errors={"Customer":"Customer with given id does not exist."})
         return cust.to_dict(),200
+
+customerStat_model = customerNs.model("CustomerStats",{
+    "service_cat":fields.String,
+    "date":fields.Date,
+    "status":fields.String,
+    "bill":fields.Float
+})
+@customerNs.route("/stats")
+class Cstat(Resource):
+    @jwt_required()
+    @customerNs.marshal_list_with(customerStat_model)
+    def get(self):
+        """Get customer Stats"""
+        if current_user.role!="customer":
+            customerNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        cdata = db.session.query(ServiceRequest,Service.category).join(ServiceRequest.professional).join(Professional.service_type).filter(ServiceRequest.customer_id==current_user.customer_data.id).all()
+        d = []
+        for sreq,sname in cdata:
+            d.append({
+                "service_cat":sname,
+                "date":sreq.dateofcompletion,
+                "status":sreq.status,
+                "bill":sreq.total_bill if sreq.total_bill else 0
+            })
+        return d,200

@@ -95,3 +95,8 @@ def date_validator(val):
         print(f"Error: {e}")
         raise ValueError("Invalid date sent Convert")
     return val
+
+def serviceStatus_validator(val):
+    if val not in ["booked","accepted","rejected","cancelled","served","completed"]:
+        raise ValueError("Service Status is invalid!")
+    return val

@@ -164,6 +164,7 @@
       </div>
     </div>
   </div>
+<div style="height:60px; width:100%"></div>
 <ShowReviewComp :pid="currentReview" v-if="showWorkerReview" @closerev="closeWorkerReview"/>
 <Teleport to="body">
   <ModalComp @destroymodal="killBooker" v-if="showBooker">

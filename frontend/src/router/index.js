@@ -77,7 +77,7 @@ const router = createRouter({
       path: "/customer/stats",
       name: "customerStats",
       component: CustomerStats,
-      beforeEnter: customerAuth,
+      // beforeEnter: customerAuth,
     },
     {
       path: "/worker/stats",

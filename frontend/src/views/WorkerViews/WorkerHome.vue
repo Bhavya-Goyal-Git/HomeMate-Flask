@@ -6,7 +6,7 @@
     </p>
   </div>
   <template v-if="showComponents">
-    <WorkerServiceReqs :pid="workerData.id" />
+    <WorkerServiceReqs :pid="workerData.id" :pfees="workerData.fees_unit" />
   </template>
   <div class="user-loader" v-if="!showComponents && !showError"></div>
 </template>
