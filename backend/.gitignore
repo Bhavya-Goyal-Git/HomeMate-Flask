@@ -4,4 +4,4 @@ instance/
 
 homemate/uploads/*
 !homemate/uploads/.gitkeep
-./celerybeat-schedule
+celerybeat-schedule
