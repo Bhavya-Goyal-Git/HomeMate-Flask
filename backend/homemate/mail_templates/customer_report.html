@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {
+            font-size: 20px;
+        }
+
+        .num {
+            color: red;
+            font-weight: bolder;
+        }
+
+        .service-tab {
+            border-collapse: collapse;
+            margin: 25px auto;
+            font-size: 16px;
+            min-width: 400px;
+            max-width: 1300px;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .service-tab thead tr {
+            background-color: #009879;
+            color: #ffffff;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .service-tab th,
+        .service-tab td {
+            padding: 12px 10px;
+        }
+
+        .service-tab tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+
+        .service-tab tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+
+        .service-tab tbody tr:last-of-type {
+            border-bottom: 2px solid #009879;
+        }
+    </style>
+</head>
+
+<body>
+    <p>Dear <strong>{{data['cname']}}</strong>,</p>
+    <p>You have booked {{data['total_services']}} Service Requests with us last month. Here is the report of Service
+        Requests booked by you for the month of {{data['month'].capitalize() }}:</p>
+    <table class="service-tab">
+        <thead>
+            <tr>
+                <th>Service Id</th>
+                <th>Service</th>
+                <th>Professional</th>
+                <th>Request Made on</th>
+                <th>Request Served on</th>
+                <th>Request Status</th>
+                <th>Total bill</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rq in data['requests'] %}
+            <tr>
+                <td>{{rq['service_id']}}</td>
+                <td>{{rq['service']}}</td>
+                <td>{{rq['professional']}}</td>
+                <td>{{rq['dateofrequest']}}</td>
+                <td>{{rq['dateofcompletion']}}</td>
+                <td>{{rq['status']}}</td>
+                <td>&#8377;{{rq['bill']}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p>Here is a summary of Service Requests based on status:</p>
+    <table class="service-tab">
+        <thead>
+            <tr>
+                <th>Service Status</th>
+                <th>Count of Services</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key,val in data['statuses'].items() %}
+            <tr>
+                <td>{{key}}</td>
+                <td>{{val}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p>In Total, you have spent <span class="num">&#8377;{{data['total_spend']}}</span> on the Services last month. Hope
+        your experience with
+        us was good
+        and you will continue Booking more!</p>
+    <p>With Regards,</p>
+    <p>Team HomeMate</p>
+</body>
+
+</html>

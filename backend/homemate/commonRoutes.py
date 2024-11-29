@@ -2,9 +2,10 @@ from homemate import api
 from flask_restx import Resource, fields, marshal
 from flask_jwt_extended import jwt_required, current_user
 from .models import db
-from .models.tables import User, Service, Professional, ServiceRequest, ProfessionalReview
+from .models.tables import User, Service, Professional, ServiceRequest, ProfessionalReview, Customer
 from .commonFields import User_model
 from sqlalchemy.sql import func
+from .asyncJobs.tasks import mail_customer_reports
 
 @api.route("/userdata")
 class UserData(Resource):
@@ -72,4 +73,11 @@ class AdminStats(Resource):
             "servReq_status":servReq_status,
             "earning_perDay":earning_perDay
         }, result),200
+
+@api.route("/test")
+class abc(Resource):
+    
+    def get(self):
+        t = mail_customer_reports.delay()
+        return {"job id":str(t)},200
         

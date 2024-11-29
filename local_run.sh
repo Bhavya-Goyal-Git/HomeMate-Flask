@@ -1,3 +1,7 @@
+echo "================================================"
+echo "Welcome to backend Run for HomeMate...."
+echo "================================================"
+
 BASE_DIR=$(pwd)
 
 if [[ ! -d "$BASE_DIR/backend/env" ]]; then

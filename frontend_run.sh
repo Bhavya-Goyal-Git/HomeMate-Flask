@@ -1,3 +1,7 @@
+echo "====================================================="
+echo "Welcome to frontend Run for HomeMate..."
+echo "====================================================="
+
 BASE_DIR=$(pwd)
 
 if [[ ! -d "$BASE_DIR/frontend/node_modules" ]]; then

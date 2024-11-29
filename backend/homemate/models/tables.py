@@ -51,6 +51,7 @@ class Customer(db.Model):
     isflagged:Mapped[bool] = mapped_column(default=False)
     
     service_requests:Mapped[List["ServiceRequest"]] = relationship(back_populates="customer")
+    user_data:Mapped["User"] = relationship(back_populates="customer_data")
     
     def to_dict(self):
         return {
@@ -101,6 +102,7 @@ class Professional(db.Model): #service worker
     service_type:Mapped["Service"] = relationship(back_populates="professionals")
     reviews:Mapped[List["ProfessionalReview"]] = relationship()
     service_requests:Mapped[List["ServiceRequest"]] = relationship(back_populates="professional")
+    user_data:Mapped["User"] = relationship(back_populates="professional_data")
     
     __table_args__ = (
         CheckConstraint(isverified.in_(["pending","approved","rejected"]), name='Professional_verification_validator'),

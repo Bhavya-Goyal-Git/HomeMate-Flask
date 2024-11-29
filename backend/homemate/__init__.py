@@ -10,6 +10,15 @@ bcrypt.init_app(app)
 db.init_app(app)
 jwt.init_app(app)
 CORS(app)
+
+import homemate.asyncJobs as jobs
+celery = jobs.celery
+celery.conf.update(
+    broker_url = app.config["CELERY_BROKER_URL"],
+    result_backend = app.config["CELERY_RESULT_BACKEND"]
+)
+celery.Task = jobs.ContextTask
+
 api = Api(app,title="HomeMate Platform API",description="A REST API for backend of HomeMate, a platform where service professionals and customers can register and find each other!",authorizations={
     "Bearer Auth":{
         "type":"apiKey",

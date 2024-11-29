@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .service-tab {
+            border-collapse: collapse;
+            margin: 25px auto;
+            font-size: 16px;
+            min-width: 400px;
+            max-width: 1300px;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .service-tab thead tr {
+            background-color: #009879;
+            color: #ffffff;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .service-tab th,
+        .service-tab td {
+            padding: 12px 10px;
+        }
+
+        .service-tab tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+
+        .service-tab tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+
+        .service-tab tbody tr:last-of-type {
+            border-bottom: 2px solid #009879;
+        }
+    </style>
+</head>
+
+<body>
+    <p>Dear <strong>{{data['pname']}}</strong>,</p>
+    <p>Here is the list of Service Requests due tomorrow i.e. {{data['tomorrow_date']}}:</p>
+    <table class="service-tab">
+        <thead>
+            <tr>
+                <th>Service Id</th>
+                <th>Customer Name</th>
+                <th>Customer Address</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rq in data['requests'] %}
+            <tr>
+                <td>{{rq['service_id']}}</td>
+                <td>{{rq['customer_name']}}</td>
+                <td>{{rq['customer_base_address']}}, {{rq['customer_city']}}-{{rq['customer_pincode']}},
+                    {{rq['customer_state']}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p>Kindly ensure timely fulfilling the Service Requests for the Customers!</p>
+    <p>With Regards,</p>
+    <p>Team HomeMate</p>
+</body>
+
+</html>
