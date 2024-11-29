@@ -161,3 +161,5 @@ class ServiceRequest(db.Model):
     __table_args__ = (
         CheckConstraint(status.in_(["booked","accepted","rejected","cancelled","served","completed"]), name='service_status_validator'),
     )
+    def as_dict(self):
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}

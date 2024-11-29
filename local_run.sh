@@ -27,6 +27,8 @@ else
 fi
 
 echo "Starting backend server now...."
-python3 "$BASE_DIR/backend/run.py"
+# python3 "$BASE_DIR/backend/run.py"
+cd "$BASE_DIR/backend"
+gunicorn -k gevent -w 4 run:app --bind 127.0.0.1:5000
 #after sever stops:
 deactivate

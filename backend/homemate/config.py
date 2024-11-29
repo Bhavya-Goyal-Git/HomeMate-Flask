@@ -9,7 +9,12 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = datetime.timedelta(days=7)
     CELERY_BROKER_URL = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND = "redis://localhost:6379/2"
+    REDIS_URL = "redis://localhost:6379"
     SMTP_SERVER_HOST ="localhost"
     SMTP_SERVER_PORT =1025
     SENDER_ADDRESS = "admin@homemate.com"
     SENDER_PASSWORD = ""
+    CACHE_TYPE = "RedisCache"
+    CACHE_REDIS_HOST = "localhost"
+    CACHE_REDIS_PORT = 6379
+    CACHE_REDIS_DB = 3

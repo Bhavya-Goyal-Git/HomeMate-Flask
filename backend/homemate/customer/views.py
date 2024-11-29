@@ -5,6 +5,7 @@ from ..models import db
 from ..models.tables import Customer, Service, ServiceRequest, Professional
 import homemate.validators as validator
 from ..commonFields import address_model
+from homemate import cache
 
 userdata_parser = reqparse.RequestParser()
 userdata_parser.add_argument("name",required=True,type=validator.name_validator,location="json")
@@ -17,6 +18,13 @@ customer_model = customerNs.model("customerModel",{
     "isflagged":fields.Boolean
 })
 
+@cache.memoize(60)
+def getCustomerbyid(id):
+    return Customer.query.filter_by(user_id=id).one_or_none()
+@cache.memoize(60)
+def getCustomerbycid(cid):
+    return Customer.query.filter_by(id=cid).one_or_none()
+
 @customerNs.route("/data/<int:id>")
 class CustomerData(Resource):
     @jwt_required()
@@ -25,7 +33,7 @@ class CustomerData(Resource):
         """Get customer's data using id (user_id)"""
         if current_user.id != id and current_user.role !="admin":
             customerNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
-        cdata = Customer.query.filter_by(user_id=id).one_or_none()
+        cdata = getCustomerbyid(id)
         if not cdata:
             customerNs.abort(404,"Some error occured",errors={"Customer":"Customer with given id does not exist."})
         return cdata.to_dict(),200
@@ -73,6 +81,7 @@ class CustomerData(Resource):
 class AllCustData(Resource):
     
     @jwt_required()
+    @cache.cached(timeout=60)
     @customerNs.marshal_list_with(customer_model)
     def get(self):
         """Get all customer's data"""
@@ -88,7 +97,7 @@ class OpenCustData(Resource):
     @customerNs.marshal_with(customer_model)
     def get(self,cid):
         """Get customer using cid"""
-        cust = Customer.query.filter_by(id=cid).one_or_none()
+        cust = getCustomerbycid(cid)
         if not cust:
             customerNs.abort(404,"Some error occured",errors={"Customer":"Customer with given id does not exist."})
         return cust.to_dict(),200

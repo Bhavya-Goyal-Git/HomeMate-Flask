@@ -3,6 +3,8 @@ from .models import db, bcrypt, jwt
 from .config import Config
 from flask_restx import Api
 from flask_cors import CORS
+from flask_sse import sse
+from flask_caching import Cache
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -10,6 +12,8 @@ bcrypt.init_app(app)
 db.init_app(app)
 jwt.init_app(app)
 CORS(app)
+cache = Cache(app)
+app.register_blueprint(sse, url_prefix='/stream')
 
 import homemate.asyncJobs as jobs
 celery = jobs.celery

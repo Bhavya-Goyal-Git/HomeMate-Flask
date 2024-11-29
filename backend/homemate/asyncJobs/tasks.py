@@ -7,12 +7,25 @@ from sqlalchemy.sql import func
 from sqlalchemy import and_
 import datetime
 from dateutil.relativedelta import relativedelta
+from .csvexport import export_to_csv
+from flask_sse import sse
+import time
 
 @celery.on_after_finalize.connect
 def setup_periodic_tasks(sender,**kwargs):
     sender.add_periodic_task(crontab(hour=17,minute=0),mail_pending_serviceReq.s(),name="Professional's pending service requests Mailing")
     sender.add_periodic_task(crontab(hour=17,minute=0),mail_tomorrow_requests.s(),name="Professional Tomorrow service requests Mailing")
     sender.add_periodic_task(crontab(hour=7,minute=0,day_of_month=1),mail_customer_reports.s(),name="Customer Monthly reports")
+
+@celery.task(bind=True)
+def ServiceRequestTableExport(self):
+    sdata = ServiceRequest.query.all()
+    time.sleep(6)
+    r = export_to_csv(sdata)
+    if r[0]:
+        sse.publish({"status":"success","filename":r[1]},type="message",channel=self.request.id)
+    else:
+        sse.publish({"status":"fail"},type="message",channel=self.request.id)
 
 @celery.task()
 def mail_pending_serviceReq():

@@ -1,7 +1,7 @@
-echo "================================================"
+echo "======================================================================"
 echo "Welcome to Celery workers Run for backend Jobs of HomeMate....."
 echo "This will start a redis server as well as celery workers!"
-echo "================================================"
+echo "======================================================================"
 
 BASE_DIR=$(pwd)
 

@@ -1,5 +1,5 @@
 from homemate.professional import professNs
-from homemate import app
+from homemate import app,cache
 from flask import send_file
 from flask_restx import Resource, reqparse, fields
 from flask_jwt_extended import jwt_required, current_user
@@ -45,6 +45,19 @@ profess_model = professNs.model("ProfessionalModel",{
 patch_parser = reqparse.RequestParser()
 patch_parser.add_argument("status",location="json",type=str)
 
+@cache.memoize(60)
+def getprofessionalbyid(id):
+    return Professional.query.filter_by(user_id=id).one_or_none()
+@cache.memoize(60)
+def getprofessionalbypid(pid):
+    return Professional.query.filter_by(id=pid).one_or_none()
+@cache.cached(timeout=60,key_prefix='all_professionals')
+def get_all_professionals():
+    return Professional.query.all()
+@cache.memoize(60)
+def profReviewbypid(id):
+    return db.session.query(ProfessionalReview,Customer).join(ProfessionalReview.customer).filter(ProfessionalReview.professional_id==id).order_by(desc(ProfessionalReview.dateofreview)).all()
+
 @professNs.route("/data/<int:id>")
 class ProfessionalData(Resource):
     
@@ -54,7 +67,7 @@ class ProfessionalData(Resource):
         """Get Professional's data using id (User id)"""
         if current_user.id != id and current_user.role !="admin":
             professNs.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
-        pdata = Professional.query.filter_by(user_id=id).one_or_none()
+        pdata = getprofessionalbyid(id)
         if not pdata:
             professNs.abort(404,"Some error occured",errors={"Professional":"Professional with given id does not exist."})
         return pdata.to_dict(),200
@@ -137,7 +150,7 @@ class AllProfessData(Resource):
         if qdata.get("unverified"):
             pdata = Professional.query.filter_by(isverified="pending").all()
         else:
-            pdata = Professional.query.all()
+            pdata = get_all_professionals()
         dataTosend = [p.to_dict() for p in pdata]
         return dataTosend,200
     
@@ -201,7 +214,7 @@ class ProfReviews(Resource):
     @professNs.marshal_list_with(review_model)
     def get(self,id):
         """Get all reviews of a professional by id (pid)"""
-        rdata = db.session.query(ProfessionalReview,Customer).join(ProfessionalReview.customer).filter(ProfessionalReview.professional_id==id).order_by(desc(ProfessionalReview.dateofreview)).all()
+        rdata = profReviewbypid(id)
         dataToSend= []
         for entry,cust in rdata:
             dataToSend.append({"id":entry.id,"customer_name":cust.name,"stars":entry.stars,"review":entry.review,"dateofreview":entry.dateofreview})
@@ -234,7 +247,7 @@ class OpenProfData(Resource):
     @professNs.marshal_with(profess_model)
     def get(self,pid):
         """Get professional using pid"""
-        pdata = Professional.query.filter_by(id=pid).one_or_none()
+        pdata = getprofessionalbypid(pid)
         if not pdata:
             professNs.abort(404,"Some error occured",errors={"Professional":"Professional with given id does not exist."})
         return pdata.to_dict(),200

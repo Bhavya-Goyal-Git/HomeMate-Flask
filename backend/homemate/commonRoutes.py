@@ -1,11 +1,13 @@
-from homemate import api
-from flask_restx import Resource, fields, marshal
+from flask import send_file
+from homemate import api,app
+from flask_restx import Resource, fields, marshal, reqparse
 from flask_jwt_extended import jwt_required, current_user
 from .models import db
 from .models.tables import User, Service, Professional, ServiceRequest, ProfessionalReview, Customer
 from .commonFields import User_model
 from sqlalchemy.sql import func
-from .asyncJobs.tasks import mail_customer_reports
+from .asyncJobs.tasks import ServiceRequestTableExport
+import os
 
 @api.route("/userdata")
 class UserData(Resource):
@@ -74,10 +76,28 @@ class AdminStats(Resource):
             "earning_perDay":earning_perDay
         }, result),200
 
-@api.route("/test")
-class abc(Resource):
+argparser = reqparse.RequestParser()
+argparser.add_argument("fname",location="args",required=True,type=str)
+
+@api.route("/servicerequest/getcsv")
+class GetServiceTable(Resource):
+    @jwt_required()
+    def post(self):
+        """Admin can request a csv export of service request table here!"""
+        if current_user.role!="admin":
+            api.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        task = ServiceRequestTableExport.apply_async()
+        return {"job_id":task.id},202
     
+    @jwt_required(refresh=True)
     def get(self):
-        t = mail_customer_reports.delay()
-        return {"job id":str(t)},200
-        
+        """Get Generated Service Request CSV by filename"""
+        if current_user.role!="admin":
+            api.abort(401,"Unauthorized",errors={"role":"You aren't authorized to access this resource"})
+        f = argparser.parse_args()
+        file_path = os.path.join(app.root_path,"ServiceRequestCSV",f["fname"])
+        if not os.path.exists(file_path):
+            api.abort(404,"Some error occured",errors={"Admin":"Submitted document could not be found!"})
+        return send_file(
+            file_path,
+        )

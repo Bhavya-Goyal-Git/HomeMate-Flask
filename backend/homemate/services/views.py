@@ -4,7 +4,8 @@ import homemate.validators as validators
 from ..models import db
 from ..models.tables import Service, ServiceCategory, ServiceRequest, Professional, Customer
 from flask_jwt_extended import current_user, jwt_required
-from sqlalchemy import asc,desc
+from sqlalchemy import desc
+from homemate import cache
 
 service_parser = reqparse.RequestParser()
 service_parser.add_argument("title",type=validators.service_title_validator,required=True,location="json")
@@ -20,9 +21,14 @@ service_model = serviceNs.model("serviceModel",{
     "category":fields.String
 })
 
+@cache.memoize(60)
+def getservicebyid(id):
+    return Service.query.filter_by(id=id).one_or_none()
+
 @serviceNs.route("")
 class ServiceClass(Resource):
     @jwt_required()
+    @cache.cached(60)
     @serviceNs.marshal_list_with(service_model)
     def get(self):
         """Get all Services data"""
@@ -58,7 +64,7 @@ class SingleService(Resource):
     @serviceNs.marshal_with(service_model)
     def get(self,id):
         """Get data of a service by id"""
-        serv = Service.query.filter_by(id=id).one_or_none()
+        serv = getservicebyid(id)
         if not serv:
             serviceNs.abort(404,"Some error occured",errors={"service":f"No sevice found with id:{id}"})
         return serv,200
@@ -113,6 +119,7 @@ categories_model = serviceNs.model("ServiceCategory",{
 @serviceNs.route("/categories")
 class ServiceCats(Resource): 
     @jwt_required()
+    @cache.cached(60)
     @serviceNs.marshal_list_with(categories_model)
     def get(self):
         """Get all service Categories"""
