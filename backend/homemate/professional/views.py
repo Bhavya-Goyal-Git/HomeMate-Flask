@@ -11,6 +11,7 @@ from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 import os
 from sqlalchemy import or_,desc
+import uuid
 
 profess_parser = reqparse.RequestParser()
 profess_parser.add_argument("name",type=validator.name_validator,required=True,location="form")
@@ -84,7 +85,7 @@ class ProfessionalData(Resource):
         doc_file = pdata["documents"]
         if doc_file.filename == '' or doc_file.filename[-3:].lower()!="pdf":
             professNs.abort(404,"Bad File",errors={"file":"Document file must be a pdf!"})
-        fname = secure_filename(doc_file.filename)
+        fname = str(uuid.uuid1()) + secure_filename(doc_file.filename)
         doc_file.save(os.path.join(app.root_path,"uploads",fname))
         
         newprofessional = Professional(user_id=id,name=pdata["name"])
@@ -103,7 +104,9 @@ class ProfessionalData(Resource):
         try:
             db.session.add(newprofessional)
             db.session.commit()
-        except:
+        except Exception as e:
+            print(e)
+            print(str(e))
             db.session.rollback()
             professNs.abort(404,"Some error occured",errors={"database":"Database error occured"})
         return newprofessional.to_dict(),201
