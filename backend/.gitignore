@@ -6,4 +6,4 @@ homemate/uploads/*
 !homemate/uploads/.gitkeep
 celerybeat-schedule
 homemate/ServiceRequestCSV/*
-!homemate/ServiceRequestCSV.gitkeep
+!homemate/ServiceRequestCSV/.gitkeep
